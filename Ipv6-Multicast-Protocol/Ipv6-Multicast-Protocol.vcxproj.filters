@@ -18,7 +18,10 @@
     <ClCompile Include="Ipv6-Multicast-Protocol.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="Ipv6-Multicast-Protocol.c">
+    <ClCompile Include="Sender.c">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="Receiver.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

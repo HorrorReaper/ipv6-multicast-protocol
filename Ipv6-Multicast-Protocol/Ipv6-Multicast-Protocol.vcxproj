@@ -127,7 +127,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Ipv6-Multicast-Protocol.c" />
+    <ClCompile Include="Receiver.c" />
+    <ClCompile Include="Sender.c" />
     <ClCompile Include="Ipv6-Multicast-Protocol.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
