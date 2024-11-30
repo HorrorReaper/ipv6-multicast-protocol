@@ -41,9 +41,13 @@ int main() {
     if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) < 0) {
         error("Joining multicast group failed");
     }
-
-    // Daten empfangen
     while (1) {
+        if (strcmp(buffer, "hi") == 0) {
+            printf("test\n");
+            char ack_msg[] = "ACK";
+            sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
+            printf("Sent ACK\n");
+        }
         int n = recvfrom(sock, buffer, DATA_SIZE, 0, (struct sockaddr*)&sender_addr, &sender_addr_len);
         if (n < 0) error("Recvfrom failed");
 
