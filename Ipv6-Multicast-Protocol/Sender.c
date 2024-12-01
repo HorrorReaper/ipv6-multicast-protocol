@@ -74,12 +74,50 @@ int main() {
 #define PORT 12345                      // Multicast-Port
 #define TIMEOUT_MS 300                  // Timeout in Millisekunden
 #define DATA_SIZE 1024                  // Größe der Nutzdaten
+typedef struct{
+	int seq_num;
+	char data[DATA_SIZE];
+} packet;
+packet* packets = NULL;
+int filesize = 0;
+int fenstergröße = 1;
+
 void error(const char* msg) {
     perror(msg);
     exit(1);
 }
+void fileReader(char* filename) {
+    char ch;
+    int size = 0;
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+		error("File not found");
+	}
+    //hier werden die Anzahl der Zeilen gezählt
+    while ((ch = fgetc(file)) != EOF) {
+        if (ch == '\n') {
+            filesize++;
+            continue;
+        }
+    }
+    packets = (packet*)malloc(filesize * sizeof(packet));
+    rewind(file);
+    for(int i = 0; i < filesize; i++) {
+		fgets(packets[i].data, 256, file);
+        packets[i].seq_num = i;
+    }
+    fclose(file);
+}
+void printPackets() {
+	for(int i = 0; i < sizeof(packets); i++) {
+		printf("Packet %d: %s\n", packets[i].seq_num, packets[i].data);
+	}
+}
 int main() {
     int sock;
+    char filename[] = "data.txt";
+    fileReader(filename);
+    printPackets();
     struct sockaddr_in6 multicast_addr, recv_addr;
     char message[] = "hi";
     char buffer[1024];
@@ -87,6 +125,7 @@ int main() {
     socklen_t recv_addr_len = sizeof(recv_addr);
     struct timeval timeout;
     int seq_num = 0;  // Startsequenznummer
+
 
     // Socket erstellen
     sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -140,18 +179,17 @@ int main() {
         // Warte kurz vor erneutem Senden (optional)
         usleep(100000);  // 100 ms
     }
-    while (1) {
-        //Data soll erstmal eine normale Nachricht sein, damit der Sender es dem Empfänger sendet und der Empfänger es bestätigt, bevor die eigentlichten Daten gesendet werden
-
+    while (seq_num < filesize) {
+        
         // Nutzdaten mit Sequenznummer vorbereiten
-        snprintf(data, DATA_SIZE, "SEQ:%d Hello Multicast!", seq_num);
+        //snprintf(data, DATA_SIZE, "SEQ:%d Hello Multicast!", seq_num);
+        snprintf(data, DATA_SIZE, "SEQ:%d %s", packets[seq_num].seq_num, packets[seq_num].data);
 
         // Paket senden
         if (sendto(sock, data, strlen(data), 0, (struct sockaddr*)&multicast_addr, sizeof(multicast_addr)) < 0) {
             error("Sendto failed");
         }
         printf("Sent: %s\n", data);
-
         seq_num++;  // Nächste Sequenznummer
         sleep(1);   // Sendeintervall
     }

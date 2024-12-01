@@ -43,7 +43,6 @@ int main() {
     }
     while (1) {
         if (strcmp(buffer, "hi") == 0) {
-            printf("test\n");
             char ack_msg[] = "ACK";
             sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
             printf("Sent ACK\n");
@@ -55,7 +54,7 @@ int main() {
         printf("Received: %s\n", buffer);
 
         // Sequenznummer extrahieren
-        int seq_num;
+        int seq_num = 0;
         sscanf(buffer, "SEQ:%d", &seq_num);
 
         // Prüfen, ob Pakete fehlen
