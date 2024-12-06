@@ -3,17 +3,57 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #define MULTICAST_ADDR "FF02::1:FF00:1"  // IPv6-Multicast-Adresse
 #define PORT 12345                      // Multicast-Port
 #define DATA_SIZE 1024                  // Größe der Nutzdaten
-
+int fenstergroesse = 1;
 void error(const char* msg) {
     perror(msg);
     exit(1);
 }
+void fileWriter(char* filename, char* data) {
+    FILE* file = fopen(filename, "a");
+    if (file == NULL) {
+		file= fopen(filename, "wb");
+        printf("File created\n");
+	}
+    fprintf(file, "%s", data);
+    fclose(file);
+    printf("Data written to file\n");
+    }
 
-int main() {
+int main(int argc, char* argv[]) {
+    printf("Argc: %d\n", argc);
+    for(int i = 0; i < argc; i++) {
+		printf("Argv[%d]: %s\n", i, argv[i]);
+	}
+    char multicast_addr[50] = MULTICAST_ADDR;
+    char filename[20] = "data.txt";
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-a") == 0) {
+            if (i + 1 < argc) {
+                // Multicast-Adresse setzen
+                strncpy(multicast_addr, argv[i + 1], sizeof(multicast_addr) - 1);
+                multicast_addr[sizeof(multicast_addr) - 1] = '\0';  // Nullterminierung sicherstellen
+                printf("Multicast-Adresse: %s\n", multicast_addr);
+                printf("Multicast-Adresse: %s\n", argv[i + 1]);
+            }
+        }
+        else if (strcmp(argv[i], "-w") == 0) {
+            if (i + 1 < argc) {
+                fenstergroesse = atoi(argv[i + 1]);
+            }
+        }
+        else if (strcmp(argv[i], "-f") == 0) {
+            if (i + 1 < argc) {
+                strcpy(filename, argv[i + 1]);
+            }
+        }
+    }
+    printf("Multicast-Adresse: %s\n", multicast_addr);
+    printf("Fenstergroesse: %d\n", fenstergroesse);
     int sock;
     struct sockaddr_in6 local_addr, sender_addr;
     char buffer[DATA_SIZE];
@@ -36,7 +76,7 @@ int main() {
 
     // Multicast-Gruppe beitreten
     struct ipv6_mreq mreq;
-    inet_pton(AF_INET6, MULTICAST_ADDR, &mreq.ipv6mr_multiaddr);
+    inet_pton(AF_INET6, multicast_addr, &mreq.ipv6mr_multiaddr);
     mreq.ipv6mr_interface = 0;  // Standardnetzwerkschnittstelle
     if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) < 0) {
         error("Joining multicast group failed");
@@ -52,6 +92,7 @@ int main() {
 
         buffer[n] = '\0';  // Null-Terminierung
         printf("Received: %s\n", buffer);
+        fileWriter(filename, buffer);
 
         // Sequenznummer extrahieren
         int seq_num = 0;

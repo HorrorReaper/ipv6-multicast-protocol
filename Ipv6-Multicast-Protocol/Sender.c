@@ -16,7 +16,7 @@ typedef struct{
 } packet;
 packet* packets = NULL;
 int filesize = 0;
-int fenstergröße = 1;
+int fenstergroesse = 1;
 
 void error(const char* msg) {
     perror(msg);
@@ -49,7 +49,29 @@ void printPackets() {
 		printf("Packet %d: %s\n", packets[i].seq_num, packets[i].data);
 	}
 }
-int main() {
+int main(int argc, char *argv[]) {
+    char multicast_addrr[] = MULTICAST_ADDR;
+    char filename[] = "data.txt";
+    for(int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-a") == 0) {
+			if (i + 1 < argc) {
+				strcpy(multicast_addrr, argv[i + 1]);
+
+			}
+		}
+        else if(strcmp(argv[i], "-w") == 0) {
+			if(i + 1 < argc) {
+				fenstergroesse = atoi(argv[i + 1]);
+			}
+		}
+        else if (strcmp(argv[i], "-f") == 0) {
+            if (i + 1 < argc) {
+                strcpy(filename, argv[i + 1]);
+            }
+        }
+	}
+    printf("Multicast-Adresse: %s\n", multicast_addrr);
+    printf("Fenstergroesse: %d\n", fenstergroesse);
     int sock;
     char filename[] = "data.txt";
     fileReader(filename);
@@ -81,9 +103,9 @@ int main() {
 
     // Multicast-Adresse und Port einstellen
     memset(&multicast_addr, 0, sizeof(multicast_addr));
-    multicast_addr.sin6_family = AF_INET6;
-    multicast_addr.sin6_port = htons(PORT);
-    inet_pton(AF_INET6, MULTICAST_ADDR, &multicast_addr.sin6_addr);
+    multicast_addr.sin6_family = AF_INET6; // IPv6 verwenden
+    multicast_addr.sin6_port = htons(PORT);// Port einstellen
+    inet_pton(AF_INET6, multicast_addrr, &multicast_addr.sin6_addr);// Multicast-Adresse einstellen
 
     while (1) {
         // Nachricht senden
