@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,8 +83,9 @@ int main(int argc, char* argv[]) {
         error("Joining multicast group failed");
     }
     while (1) {
+        char ack_msg[] = "ACK";
         if (strcmp(buffer, "hi") == 0) {
-            char ack_msg[] = "ACK";
+            
             sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
             printf("Sent ACK\n");
         }
@@ -93,10 +95,14 @@ int main(int argc, char* argv[]) {
         buffer[n] = '\0';  // Null-Terminierung
         printf("Received: %s\n", buffer);
         fileWriter(filename, buffer);
+        
 
         // Sequenznummer extrahieren
         int seq_num = 0;
         sscanf(buffer, "SEQ:%d", &seq_num);
+        snprintf(ack_msg, sizeof(ack_msg), "ACK:%d", seq_num);
+        sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
+        printf("Sent ACK for packet %d\n", seq_num);
 
         // Prüfen, ob Pakete fehlen
         if (seq_num > last_seq_num + 1) {
@@ -117,3 +123,4 @@ int main(int argc, char* argv[]) {
     close(sock);
     return 0;
 }
+

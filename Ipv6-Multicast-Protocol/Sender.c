@@ -1,4 +1,4 @@
-
+ï»¿
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,10 +9,10 @@
 #define MULTICAST_ADDR "FF02::1:FF00:1"  // Multicast-Adresse
 #define PORT 12345                      // Multicast-Port
 #define TIMEOUT_MS 300                  // Timeout in Millisekunden
-#define DATA_SIZE 1024                  // Größe der Nutzdaten
-typedef struct{
-	int seq_num;
-	char data[DATA_SIZE];
+#define DATA_SIZE 1024                  // Grï¿½ï¿½e der Nutzdaten
+typedef struct {
+    int seq_num;
+    char data[DATA_SIZE];
 } packet;
 packet* packets = NULL;
 int filesize = 0;
@@ -27,9 +27,9 @@ void fileReader(char* filename) {
     int size = 0;
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
-		error("File not found");
-	}
-    //hier werden die Anzahl der Zeilen gezählt
+        error("File not found");
+    }
+    //hier werden die Anzahl der Zeilen gezï¿½hlt
     while ((ch = fgetc(file)) != EOF) {
         if (ch == '\n') {
             filesize++;
@@ -38,42 +38,41 @@ void fileReader(char* filename) {
     }
     packets = (packet*)malloc(filesize * sizeof(packet));
     rewind(file);
-    for(int i = 0; i < filesize; i++) {
-		fgets(packets[i].data, 256, file);
+    for (int i = 0; i < filesize; i++) {
+        fgets(packets[i].data, 256, file);
         packets[i].seq_num = i;
     }
     fclose(file);
 }
 void printPackets() {
-	for(int i = 0; i < sizeof(packets); i++) {
-		printf("Packet %d: %s\n", packets[i].seq_num, packets[i].data);
-	}
+    for (int i = 0; i < sizeof(packets); i++) {
+        printf("Packet %d: %s\n", packets[i].seq_num, packets[i].data);
+    }
 }
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     char multicast_addrr[] = MULTICAST_ADDR;
     char filename[] = "data.txt";
-    for(int i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-a") == 0) {
-			if (i + 1 < argc) {
-				strcpy(multicast_addrr, argv[i + 1]);
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-a") == 0) {
+            if (i + 1 < argc) {
+                strcpy(multicast_addrr, argv[i + 1]);
 
-			}
-		}
-        else if(strcmp(argv[i], "-w") == 0) {
-			if(i + 1 < argc) {
-				fenstergroesse = atoi(argv[i + 1]);
-			}
-		}
+            }
+        }
+        else if (strcmp(argv[i], "-w") == 0) {
+            if (i + 1 < argc) {
+                fenstergroesse = atoi(argv[i + 1]);
+            }
+        }
         else if (strcmp(argv[i], "-f") == 0) {
             if (i + 1 < argc) {
                 strcpy(filename, argv[i + 1]);
             }
         }
-	}
+    }
     printf("Multicast-Adresse: %s\n", multicast_addrr);
     printf("Fenstergroesse: %d\n", fenstergroesse);
     int sock;
-    char filename[] = "data.txt";
     fileReader(filename);
     printPackets();
     struct sockaddr_in6 multicast_addr, recv_addr;
@@ -92,7 +91,7 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    // Timeout für recvfrom setzen
+    // Timeout fï¿½r recvfrom setzen
     timeout.tv_sec = 0;
     timeout.tv_usec = TIMEOUT_MS * 1000;  // Umrechnung in Mikrosekunden
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
@@ -130,7 +129,7 @@ int main(int argc, char *argv[]) {
             // Antwort validieren (optional)
             if (strcmp(buffer, "ACK") == 0) {
                 printf("Acknowledgment received, sending next sequence.\n");
-                break;  // Nachricht erfolgreich empfangen, weitere Logik einfügen
+                break;  // Nachricht erfolgreich empfangen, weitere Logik einfï¿½gen
             }
         }
 
@@ -138,7 +137,7 @@ int main(int argc, char *argv[]) {
         usleep(100000);  // 100 ms
     }
     while (seq_num < filesize) {
-        
+
         // Nutzdaten mit Sequenznummer vorbereiten
         //snprintf(data, DATA_SIZE, "SEQ:%d Hello Multicast!", seq_num);
         snprintf(data, DATA_SIZE, "SEQ:%d %s", packets[seq_num].seq_num, packets[seq_num].data);
@@ -148,8 +147,23 @@ int main(int argc, char *argv[]) {
             error("Sendto failed");
         }
         printf("Sent: %s\n", data);
-        seq_num++;  // Nächste Sequenznummer
-        sleep(1);   // Sendeintervall
+        int n = recvfrom(sock, buffer, sizeof(buffer) - 1, 0, (struct sockaddr*)&recv_addr, &recv_addr_len);
+        if (n < 0) {
+			// Timeout abgelaufen
+			perror("No response received, resending...");
+		}
+		else {
+			// Antwort erhalten
+			buffer[n] = '\0';  // Null-terminieren
+			printf("Received: %s\n", buffer);
+
+			// Antwort validieren (optional)
+			if (strcmp(buffer, "ACK") == 0) {
+				printf("Acknowledgment received, sending next sequence.\n");
+				seq_num++;
+			}
+		}
+        sleep(1);
     }
 
     close(sock);
