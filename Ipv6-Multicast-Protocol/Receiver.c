@@ -10,6 +10,7 @@
 #define PORT 12345                      // Multicast-Port
 #define DATA_SIZE 1024                  // Größe der Nutzdaten
 int fenstergroesse = 1;
+int packets_received[1024] = {0};
 void error(const char* msg) {
     perror(msg);
     exit(1);
@@ -82,27 +83,56 @@ int main(int argc, char* argv[]) {
     if (setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) < 0) {
         error("Joining multicast group failed");
     }
+    //Grundlegender Verbindungsaufbau
     while (1) {
-        char ack_msg[] = "ACK";
-        if (strcmp(buffer, "hi") == 0) {
-            
-            sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
-            printf("Sent ACK\n");
-        }
         int n = recvfrom(sock, buffer, DATA_SIZE, 0, (struct sockaddr*)&sender_addr, &sender_addr_len);
         if (n < 0) error("Recvfrom failed");
-
         buffer[n] = '\0';  // Null-Terminierung
         printf("Received: %s\n", buffer);
+        if (strcmp(buffer, "hi") == 0) {
+            char ack_msg[50];
+            strcpy(ack_msg, "ACK");
+            sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
+            printf("Sent ACK\n");
+            break;
+        }
+        else if (strcmp(buffer, "END") == 0) {
+            printf("Transmission complete. Exiting receiver loop.\n");
+            break;
+        }
+        usleep(100000);
+    }
+    while (1) {
+        char ack_msg[50];
+        /*if (strcmp(buffer, "hi") == 0) {
+            strcpy(ack_msg, "ACK");
+            sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
+            printf("Sent ACK\n");
+        }else*/
+        
+        int n = recvfrom(sock, buffer, DATA_SIZE, 0, (struct sockaddr*)&sender_addr, &sender_addr_len);
+        if (n < 0) error("Recvfrom failed");
+        buffer[n] = '\0';  // Null-Terminierung
+        printf("Received: '%s' (length: %d)\n", buffer, strlen(buffer));
+        if (strcmp(buffer, "close") == 0) {
+            printf("Transmission complete. Exiting receiver loop.\n");
+            break;
+        }
+        
         fileWriter(filename, buffer);
         
 
         // Sequenznummer extrahieren
         int seq_num = 0;
         sscanf(buffer, "SEQ:%d", &seq_num);
+        if(packets_received[seq_num] == 1) {
+			printf("Packet %d already received\n", seq_num);
+			continue;
+		}
+        packets_received[seq_num] = 1;
         snprintf(ack_msg, sizeof(ack_msg), "ACK:%d", seq_num);
         sendto(sock, ack_msg, strlen(ack_msg), 0, (struct sockaddr*)&sender_addr, sender_addr_len);
-        printf("Sent ACK for packet %d\n", seq_num);
+        printf("Sent ACK for packet %d: %s\n", seq_num, ack_msg);
 
         // Prüfen, ob Pakete fehlen
         if (seq_num > last_seq_num + 1) {
